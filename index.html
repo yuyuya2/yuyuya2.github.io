@@ -221,7 +221,14 @@
             z-index: 100000 !important;
         }
         }
-        
+        /* ✅ 手機橫向：避免 sidePanel 跟問卷按鈕黏在一起 */
+        @media (max-width: 768px) and (orientation: landscape) {
+          #sidePanel{
+            top: auto !important;        /* 不用 top */
+            bottom: 100px !important;    /* 放在問卷按鈕上方 */
+            max-height: 40vh !important; /* 再矮一點 */
+          }
+        }
     </style>
 </head>
 <body>
