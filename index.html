@@ -207,7 +207,7 @@
                 display: flex;
             }
         }
-         /* ✅ 手機：把右側框框往上推，避免蓋住「進入問卷」 */
+        /* ✅ 手機：把右側框框往上推，避免蓋住「進入問卷」 */
         @media (max-width: 768px) {
         #sidePanel{
             top: 60px !important;
@@ -229,12 +229,30 @@
             max-height: 40vh !important; /* 再矮一點 */
           }
         }
+        /* 加一個框框按鈕 */
+        #panelToggle{
+        position: fixed !important;
+        right: 16px !important;
+        top: 90px !important;          /* 你要移上面：改 top */
+        bottom: auto !important;       /* 用 top 就把 bottom 關掉 */
+        width: 52px !important;
+        height: 52px !important;
+        border-radius: 50% !important;
+        border: none !important;
+        background: rgba(52,80,90,0.95) !important;
+        color: #fff !important;
+        font-size: 22px !important;
+        z-index: 2147483647 !important; /* 超大，壓過任何遮罩/iframe */
+        pointer-events: auto !important;
+        }
+
+
     </style>
 </head>
 <body>
     
     <div id="rotate-prompt-overlay">
-        <p>為了獲得最佳體驗，請將您的裝置轉為橫向模式。</p>
+        <p>本平台需在橫向模式下瀏覽，請將您的裝置轉為橫向模式。</p>
     </div>
     <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(11, 19, 43, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; text-align: left; color: #ecf0f1; padding: 20px; box-sizing: border-box;" id="welcome-statement">
         <div style="max-width: 800px; background-color: #1c2541; padding: 30px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); border: 1px solid #3a506b;">
@@ -551,8 +569,7 @@
             if (step.useIframe) {
                 tutorialBgImg.style.display = 'none';
                 externalSiteIframe.style.display = 'block';
-                 // ✅ 到水利署(iframe)才顯示右邊框框
-                document.getElementById('sidePanel').style.display = 'block';
+                
             } else {
                 externalSiteIframe.style.display = 'none';
                 tutorialBgImg.style.display = 'block';
@@ -636,12 +653,30 @@
 
         // 頁面載入時就預加載圖片
         preloadTutorialImages();
+        // ===== 最簡單版本：點 ☰ 切換 sidePanel =====
+        window.addEventListener('load', function () {
+        const btn = document.getElementById('panelToggle');
+        const panel = document.getElementById('sidePanel');
+
+        if (!btn || !panel) {
+            console.log('找不到 panelToggle 或 sidePanel');
+            return;
+        }
+
+        btn.onclick = function () {
+            if (panel.style.display === 'none') {
+            panel.style.display = 'block';
+            } else {
+            panel.style.display = 'none';
+            }
+        };
+        });
 
     </script>
     
     // 新增下拉式按鈕
     
-<div id="sidePanel" style="position:fixed; top:145px; right:10px; width:360px; z-index:99999; background:rgba(52, 80, 90, 0.9); padding:14px 14px; border-radius:14px; color:#fff; font-size:18px; display:none !important;">    
+<div id="sidePanel" style="position:fixed; top:145px; right:10px; width:360px; z-index:99999; background:rgba(52, 80, 90, 0.9); padding:14px 14px; border-radius:14px; color:#fff; font-size:18px; display:none;">    
     <div style="font-weight:700; margin-bottom:10px;">區域篩選</div>
     <select id="regionSelect2" style="width:100%; padding:10px 12px; border-radius:12px;">
         <option value="">請選擇區域</option>
@@ -869,7 +904,7 @@
 
 
     </script>
-
+<button id="panelToggle">☰</button>
 
 </body>
 
