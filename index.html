@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水資源資訊平臺</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 基本設定 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden;
+            background-color: #0b132b;
+        }
+
+        /* --- 背景層 --- */
+        .background-gradient {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(-45deg, #0b132b, #1c2541, #3a506b, #5bc0be);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            z-index: 1;
+        }
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        #particle-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+        }
+
+        /* --- 內容層 --- */
+        .screen {
+            width: 100%; height: 100%; display: flex;
+            justify-content: center; align-items: center; text-align: center; color: #ffffff;
+            position: absolute; top: 0; left: 0;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+            z-index: 3;
+        }
+        .screen.active { opacity: 1; visibility: visible; }
+        #home-screen { flex-direction: column; }
+        .logo {
+            width: 180px; height: 180px; margin-bottom: 2rem;
+            animation: float 4s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(91, 192, 190, 0.5));
+            border-radius: 50%; object-fit: cover;
+        }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
+        
+        h1 { font-size: 2.8rem; text-shadow: 0 0 10px rgba(0, 0, 0, 0.5); margin-bottom: 1rem; font-weight: 700; }
+        p.subtitle { font-size: 1.2rem; color: #cdd4e4; margin-bottom: 2.5rem; }
+
+        .start-button {
+            background-color: #5bc0be; color: #0b132b; border: none; padding: 15px 40px;
+            font-size: 1.2rem; font-weight: 700; border-radius: 50px; cursor: pointer;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(91, 192, 190, 0.3); letter-spacing: 1px;
+        }
+        .start-button:hover { transform: translateY(-4px) scale(1.05); box-shadow: 0 8px 25px rgba(91, 192, 190, 0.5); }
+        
+        #tutorial-screen {
+            background-color: #f0f2f5; 
+        }
+        #tutorial-bg-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: opacity 0.3s ease;
+        }
+        
+        .next-page-button {
+            position: fixed; bottom: 30px; right: 30px; background-color: #e67e22; color: white;
+            padding: 12px 25px; border-radius: 50px; text-decoration: none; font-size: 1.1rem;
+            font-weight: 500; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .next-page-button:hover { background-color: #d35400; transform: scale(1.05); }
+
+        /* --- 教學引導層樣式 --- */
+        #tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1500;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        #tutorial-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #tutorial-highlight {
+            position: absolute;
+            border: 3px solid #e74c3c;
+            border-radius: 8px;
+            box-shadow: 0 0 0 9999px rgba(11, 19, 43, 0.85);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #tutorial-text {
+            position: absolute;
+            background-color: rgba(44, 62, 80, 0.95);
+            color: #ecf0f1;
+            padding: 20px 25px;
+            border-radius: 10px;
+            border: 1px solid #7f8c8d;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            line-height: 1.7;
+            font-size: 1.1rem;
+        }
+        #tutorial-text h3 {
+            margin: 0 0 10px 0;
+            color: #5bc0be;
+            font-size: 1.4rem;
+        }
+        #tutorial-text p {
+            margin: 0 0 15px 0;
+        }
+        #tutorial-text small {
+            color: #bdc3c7;
+            font-style: italic;
+        }
+        .text-highlight {
+            background-color: #f39c12;
+            color: #0b132b;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 768px) {
+            h1 { font-size: 2.2rem; }
+            p.subtitle { font-size: 1rem; }
+            .logo { width: 140px; height: 140px; }
+            .start-button { padding: 12px 30px; font-size: 1rem;}
+            .next-page-button { bottom: 20px; right: 20px; padding: 10px 20px; font-size: 1rem;}
+            #tutorial-text { font-size: 1rem; padding: 15px 20px;}
+            #tutorial-text h3 { font-size: 1.2rem; }
+
+            #welcome-statement > div {
+                padding: 20px !important;
+            }
+            #welcome-statement h2 {
+                font-size: 1.5em !important;
+            }
+            #welcome-statement p, #welcome-statement ol {
+                font-size: 1em !important;
+                line-height: 1.6 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            #welcome-statement {
+                padding: 25px !important;
+            }
+            #welcome-statement > div {
+                padding: 15px 10px !important;
+            }
+            #welcome-statement h2 {
+                font-size: 1.2em !important;
+            }
+            #welcome-statement p, #welcome-statement ol {
+                font-size: 0.85em !important;
+            }
+            #welcome-statement ol {
+                padding-left: 20px !important;
+            }
+            #welcome-statement button {
+                padding: 10px 20px !important;
+                font-size: 0.9em !important;
+            }
+            #tutorial-text { font-size: 0.9rem; padding: 10px 15px; }
+            #tutorial-text h3 { font-size: 0.8rem; }
+        }
+
+        #rotate-prompt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(11, 19, 43, 0.98);
+            color: white;
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1024px) and (orientation: portrait) {
+            body.tutorial-active #rotate-prompt-overlay {
+                display: flex;
+            }
+        }
+
+        
+
+    </style>
+</head>
+<body>
+    
+    <div id="rotate-prompt-overlay">
+        <p>為了獲得最佳體驗，請將您的裝置轉為橫向模式。</p>
+    </div>
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(11, 19, 43, 0.95); z-index: 9999; display: flex; justify-content: center; align-items: center; text-align: left; color: #ecf0f1; padding: 20px; box-sizing: border-box;" id="welcome-statement">
+        <div style="max-width: 800px; background-color: #1c2541; padding: 30px; border-radius: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); border: 1px solid #3a506b;">
+            <h2 style="color: #5bc0be; font-size: 1.8em; margin-top: 0; text-align: center;     line-height: 1.4; ">歡迎參與「水資源資訊對民眾用水行為之影響」學術研究</h2>
+            <p style="font-size: 1.1em; line-height: 1.7;">您好！感謝您撥冗參與本次研究。本研究旨在探討使用者對於數位共創平台的介面設計、資訊呈現及平台互動性之感受與看法。</p>
+            <p style="color: #f34a4a;font-size: 1.1em; line-height: 1.7;"><b>裝置建議 ：為確保實驗介面完整顯示，建議使用「電腦」或「筆記型電腦」進行瀏覽與填答。</b></p>
+            <p style="font-size: 1.1em; line-height: 1.7;"> 您的任務流程如下：</p>
+            <ol style="font-size: 1.1em; line-height: 1.8; padding-left: 25px;">
+                <li><strong>閱讀情境：</strong>請先想像目前台灣正面臨嚴重的乾旱危機，多個水庫已進入警戒狀態。</li>
+                <li><strong>瀏覽平台：</strong>點擊【我已了解，開始體驗】後，您將進入平台首頁。請您以此情境為基礎，仔細瀏覽目前各水庫的蓄水量與警戒燈號。</li>
+                <li><strong>填寫問卷：</strong>體驗完畢後，請根據您當下的真實感受，填寫一份學術問卷。</li>
+            </ol>
+            <p style="font-size: 1.1em; line-height: 1.7;">本問卷採取不記名方式，且資料僅供學術研究使用，不會對外公開，請您依自身的想法填答即可。</p>
+            <div style="text-align: center; margin-top: 25px;">
+                <button onclick="document.getElementById('welcome-statement').style.display='none';" style="background-color: #e67e22; color: white; border: none; padding: 12px 30px; font-size: 1.1em; font-weight: 700; border-radius: 50px; cursor: pointer; transition: all 0.3s ease;">我已了解，開始體驗</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 背景層 -->
+    <div class="background-gradient"></div>
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- 內容層 -->
+    <div id="home-screen" class="screen active">
+        <img src="dry-logo.png" alt="水資源 Logo" class="logo">
+        <h1>情境模擬：面臨日益惡化的乾旱危機</h1>
+        <p class="subtitle">乾旱預警系統已啟動，請檢視即時水位、警戒與防災資訊</p>
+        <button id="start-btn" class="start-button">進入平台</button>
+    </div>
+
+
+    <!-- 教學引導畫面 -->
+    <div id="tutorial-screen" class="screen">
+        <img id="tutorial-bg-img" src="" alt="防災資訊網教學背景">
+        <iframe id="external-site-iframe" style="width:100%; height:100%; border:none; position:absolute; top:0; left:0; z-index: 5;"></iframe>
+        <a href="https://www.surveycake.com/s/0bPz4" class="next-page-button">進入問卷 &raquo;</a>
+    </div>
+
+    <!-- 教學引導層 -->
+    <div id="tutorial-overlay">
+        <div id="tutorial-highlight"></div>
+        <div id="tutorial-text"></div>
+    </div>
+
+    <script>
+        // --- 粒子動畫邏輯 (保持不變) ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let particlesArray;
+        class Particle{constructor(t,e,i,o,s,a){this.x=t,this.y=e,this.directionX=i,this.directionY=o,this.size=s,this.color=a}draw(){ctx.beginPath(),ctx.arc(this.x,this.y,this.size,0,2*Math.PI,!1),ctx.fillStyle=this.color,ctx.fill()}update(){this.x>canvas.width||this.x<0?this.directionX=-this.directionX:void 0,this.y>canvas.height||this.y<0?this.directionY=-this.directionY:void 0,this.x+=this.directionX,this.y+=this.directionY,this.draw()}}
+        function init(){particlesArray=[];const t=(canvas.height*canvas.width)/9e3;for(let e=0;e<t;e++){const t=2*Math.random()+1,i=Math.random()*(innerWidth-2*t-2*t)+2*t,o=Math.random()*(innerHeight-2*t-2*t)+2*t,s=.4*Math.random()-.2,a=.4*Math.random()-.2;particlesArray.push(new Particle(i,o,s,a,t,"rgba(200, 210, 255, 0.8)"))}}
+        function connect(){let t=1;for(let e=0;e<particlesArray.length;e++)for(let i=e;i<particlesArray.length;i++){const o=(particlesArray[e].x-particlesArray[i].x)*(particlesArray[e].x-particlesArray[i].x)+(particlesArray[e].y-particlesArray[i].y)*(particlesArray[e].y-particlesArray[i].y);o<canvas.width/7*(canvas.height/7)&&(t=1-o/2e4,ctx.strokeStyle=`rgba(180, 190, 255, ${t})`,ctx.lineWidth=1,ctx.beginPath(),ctx.moveTo(particlesArray[e].x,particlesArray[e].y),ctx.lineTo(particlesArray[i].x,particlesArray[i].y),ctx.stroke())}}
+        function animate(){requestAnimationFrame(animate),ctx.clearRect(0,0,innerWidth,innerHeight);for(let t=0;t<particlesArray.length;t++)particlesArray[t].update();connect()}
+        window.addEventListener("resize",()=>{canvas.width=innerWidth,canvas.height=innerHeight,init(); updateStepDisplay(); }),init(),animate();
+
+        // --- 圖片預加載邏輯 ---
+        function preloadImages(urls) {
+            urls.forEach(url => {
+                const img = new Image();
+                img.src = url;
+            });
+        }
+
+        // --- 頁面切換與教學引導邏輯 ---
+        const startBtn = document.getElementById('start-btn');
+        const homeScreen = document.getElementById('home-screen');
+        const tutorialScreen = document.getElementById('tutorial-screen');
+        const tutorialBgImg = document.getElementById('tutorial-bg-img');
+        const externalSiteIframe = document.getElementById('external-site-iframe');
+        const tutorialOverlay = document.getElementById('tutorial-overlay');
+        const tutorialHighlight = document.getElementById('tutorial-highlight');
+        const tutorialText = document.getElementById('tutorial-text');
+        const nextPageButton = document.querySelector('.next-page-button');
+
+        // 在腳本開始時就呼叫預加載函式
+        preloadImages(['page1.jpg', 'page2.jpg', 'page3.jpg', 'page4.jpg', 'dry-logo.png']);
+
+        // ==================================================================
+        // ======================= ✅ 正確的物件結構 //下,右,寬,高,圓角=======================
+        // ==================================================================
+        const tutorialSteps = [
+            {
+                background: 'page1.jpg',
+                highlight: { top: '24.0%', left: '19.0%', width: '7.6%', height: '6.2%', borderRadius: '8px' },
+                text: {
+                    content: `<h3>步驟 1：選擇縣市</h3><p>首先，從這裡的下拉選單中，選擇您想查詢水情的縣市</p>`,
+                    maxWidth: '350px'
+                },
+                textPosition: 'right',
+                textOffset: 20
+            },
+            {
+                background: 'page2.jpg',
+                highlight: { top: '15.0%', left: '80.0%', width: '19.5%', height: '10.0%', borderRadius: '8px' },
+                text: {
+                    content: `<h3>步驟 2：選擇區域</h3><p>點擊選單，選擇您想查看的區域<br>（如：離島）</p>`,
+                    maxWidth: '300px'
+                },
+                textPosition: 'left'
+            },
+            {
+                background: 'page3.jpg',
+                highlight: { top: '26.0%', left: '80.0%', width: '16.5%', height: '26.0%', borderRadius: '8px' },
+                text: {
+                    content: `<h3>步驟 3：檢視低水位水庫排行</h3><p>這裡列出目前蓄水量最危險的前三名水庫<br>當數值呈現紅色，代表該供水區域將面臨「<b>分區供水</b>」或「<b>停水</b>」風險，請務必提高警覺。</p>`,
+                    maxWidth: '300px'
+                },
+                textPosition: 'left'
+            },
+            {
+                background: 'page4.jpg',
+                highlight: { top: '53.0%', left: '80.0%', width: '19.5%', height: '34.0%', borderRadius: '8px' },
+                text: {
+                    content: `<h3>步驟 4-1：各區平均儲蓄率</h3><p>此數據代表該區域的整體水資源安全存量，顯現出整區生態與民生所面臨的重要考驗</p>`,
+                    maxWidth: '300px'
+                },
+                textPosition: 'left'
+                
+            },
+            {
+                background: 'page4.jpg',
+                highlight: { top: '57.0%', left: '80.0%', width: '18%', height: '6%', borderRadius: '8px' },
+                text: {
+                    content: `<h3>步驟 4-2：警戒燈號</h3><p>系統將依據缺水嚴重程度顯示不同燈號，您的生活將遭受各種影響程度：<br><br> <span style="color: #ff4d4f;"> 紅色警報</span>&nbsp;&nbsp;危機！需立即採取嚴格節水，否則將面臨生活衝擊<br><span style="color: #ffc582;"> 黃色警報</span>&nbsp;&nbsp;警戒！水情轉緊，請預做儲水準備</p>`,
+                    maxWidth: '300px'
+                },
+                textPosition: 'left'
+            },
+            {
+                useIframe: true,
+                // ✨ 新增 highlightTarget，值為「下一頁」按鈕的 CSS 選擇器
+                highlightTarget: '.next-page-button', 
+                text: {
+                    content: `<h3>教學結束</h3><p>接下來請自由瀏覽畫面上的各類資訊，若您已充分了解目前的水情狀況後，請<span class="text-highlight">點擊</span>畫面右下角的「<b>進入問卷</b>」按鈕，並進行作答</p>`,
+                    maxWidth: '300px'
+                },
+                // ✨ 現在我們可以為它設定智慧型定位了！
+                textPosition: 'left', 
+                isInteractive: true // 讓高亮框可以被點擊
+            }
+        ];
+
+        let currentStep = -1;
+
+        // ==================================================================
+        // ======================= ✅ 修正後的函數 =========================
+        // ==================================================================
+        function updateStepDisplay() {
+    if (currentStep < 0 || currentStep >= tutorialSteps.length) return;
+    const step = tutorialSteps[currentStep];
+
+    // 1. 更新文字內容 (邏輯不變)
+    let smallText = '';
+    if (!step.isInteractive) {
+        smallText = step.text.content.includes("教學結束")
+            ? '<small>請點擊右下角按鈕開始模擬。</small>'
+            : '<small>點擊畫面任意處繼續...</small>';
+    }
+    tutorialText.innerHTML = `${step.text.content}${smallText}`;
+    tutorialText.style.maxWidth = step.text.maxWidth || 'auto';
+
+    // ✨ [新增] 處理 highlightTarget 的邏輯
+    if (step.highlightTarget) {
+        const targetElement = document.querySelector(step.highlightTarget);
+        if (targetElement) {
+            const rect = targetElement.getBoundingClientRect();
+            const padding = 5; // 給高亮框一點呼吸空間
+
+            // 直接用讀取到的元素位置來設定 highlight
+            tutorialHighlight.style.top = `${rect.top - padding}px`;
+            tutorialHighlight.style.left = `${rect.left - padding}px`;
+            tutorialHighlight.style.width = `${rect.width + (padding * 2)}px`;
+            tutorialHighlight.style.height = `${rect.height + (padding * 2)}px`;
+            // 讓高亮框跟按鈕一樣圓
+            tutorialHighlight.style.borderRadius = '50px'; 
+            
+            // ✨ 讓文字框定位邏輯也能用於 target 模式
+            setTimeout(() => {
+                const textEl = tutorialText;
+                const textRect = textEl.getBoundingClientRect();
+                const gap = step.textOffset || 15;
+                const hTop = rect.top - padding;
+                const hLeft = rect.left - padding;
+                const hWidth = rect.width + (padding * 2);
+                const hHeight = rect.height + (padding * 2);
+
+                let newTextTop = 0, newTextLeft = 0;
+                
+                switch (step.textPosition) {
+                    case 'top':
+                        newTextTop = hTop - textRect.height - gap;
+                        newTextLeft = hLeft + hWidth / 2 - textRect.width / 2;
+                        break;
+                    case 'left':
+                        newTextTop = hTop + hHeight / 2 - textRect.height / 2;
+                        newTextLeft = hLeft - textRect.width - gap;
+                        break;
+                    // 可以根據需要添加 'right', 'bottom'
+                    default:
+                        newTextTop = hTop - textRect.height - gap;
+                        newTextLeft = hLeft + hWidth / 2 - textRect.width / 2;
+                        break;
+                }
+
+                // 邊界檢查 (邏輯不變)
+                if (newTextTop < gap) newTextTop = gap;
+                if (newTextTop + textRect.height > window.innerHeight - gap) newTextTop = window.innerHeight - textRect.height - gap;
+                if (newTextLeft < gap) newTextLeft = gap;
+                if (newTextLeft + textRect.width > window.innerWidth - gap) newTextLeft = window.innerWidth - textRect.width - gap;
+
+                textEl.style.top = `${newTextTop}px`;
+                textEl.style.left = `${newTextLeft}px`;
+            }, 0);
+        }
+        return; // 處理完 target 後就結束，不執行後續的 positioner
+    }
+
+
+    // 2. 定位器函數 (處理圖片背景，邏輯不變)
+    const positioner = (imgWidth, imgHeight) => {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const viewportRatio = viewportWidth / viewportHeight;
+        const imageRatio = imgWidth / imgHeight;
+
+        let renderedWidth, renderedHeight, offsetX, offsetY;
+
+        if (imageRatio > viewportRatio) {
+            renderedWidth = viewportWidth;
+            renderedHeight = renderedWidth / imageRatio;
+            offsetX = 0;
+            offsetY = (viewportHeight - renderedHeight) / 2;
+        } else {
+            renderedHeight = viewportHeight;
+            renderedWidth = renderedHeight * imageRatio;
+            offsetY = 0;
+            offsetX = (viewportWidth - renderedWidth) / 2;
+        }
+
+        const h = step.highlight;
+        const hTop = offsetY + (parseFloat(h.top) / 100) * renderedHeight;
+        const hLeft = offsetX + (parseFloat(h.left) / 100) * renderedWidth;
+        const hWidth = (parseFloat(h.width) / 100) * renderedWidth;
+        const hHeight = (parseFloat(h.height) / 100) * renderedHeight;
+
+        tutorialHighlight.style.top = `${hTop}px`;
+        tutorialHighlight.style.left = `${hLeft}px`;
+        tutorialHighlight.style.width = `${hWidth}px`;
+        tutorialHighlight.style.height = `${hHeight}px`;
+        tutorialHighlight.style.borderRadius = h.borderRadius;
+
+        setTimeout(() => {
+            const textEl = tutorialText;
+            const textRect = textEl.getBoundingClientRect();
+            const gap = step.textOffset || 15;
+            let newTextTop = 0, newTextLeft = 0;
+
+            switch (step.textPosition) {
+                case 'top':
+                    newTextTop = hTop - textRect.height - gap;
+                    newTextLeft = hLeft + hWidth / 2 - textRect.width / 2;
+                    break;
+                case 'right':
+                    newTextTop = hTop + hHeight / 2 - textRect.height / 2;
+                    newTextLeft = hLeft + hWidth + gap;
+                    break;
+                case 'left':
+                    newTextTop = hTop + hHeight / 2 - textRect.height / 2;
+                    newTextLeft = hLeft - textRect.width - gap;
+                    break;
+                case 'bottom':
+                default:
+                    newTextTop = hTop + hHeight + gap;
+                    newTextLeft = hLeft + hWidth / 2 - textRect.width / 2;
+                    break;
+            }
+
+            if (newTextTop < gap) newTextTop = gap;
+            if (newTextTop + textRect.height > viewportHeight - gap) newTextTop = viewportHeight - textRect.height - gap;
+            if (newTextLeft < gap) newTextLeft = gap;
+            if (newTextLeft + textRect.width > viewportWidth - gap) newTextLeft = viewportWidth - textRect.width - gap;
+
+            textEl.style.top = `${newTextTop}px`;
+            textEl.style.left = `${newTextLeft}px`;
+        }, 0);
+        };
+
+        // 根據步驟類型執行 (這裡的邏輯需要簡化)
+        if (step.useIframe && !step.highlightTarget) {
+            // 保留給未來可能出現的、沒有 target 的 iframe 步驟
+            Object.assign(tutorialHighlight.style, step.highlight);
+            tutorialText.style.top = step.text.top;
+            tutorialText.style.left = step.text.left;
+        } else {
+            const img = new Image();
+            img.onload = function() {
+                positioner(this.width, this.height);
+            };
+            img.src = step.background;
+        }
+    }
+
+        function showStep(stepIndex) {
+            if (stepIndex >= tutorialSteps.length) {
+                endTutorial();
+                return;
+            }
+            currentStep = stepIndex;
+            const step = tutorialSteps[currentStep];
+
+            if (step.useIframe) {
+                tutorialBgImg.style.display = 'none';
+                externalSiteIframe.style.display = 'block';
+                 // ✅ 到水利署(iframe)才顯示右邊框框
+                document.getElementById('sidePanel').style.display = 'block';
+            } else {
+                externalSiteIframe.style.display = 'none';
+                tutorialBgImg.style.display = 'block';
+
+                // ✅ 其他步驟都不要顯示（包含首頁、教學圖片）
+                document.getElementById('sidePanel').style.display = 'none';
+
+
+                // 預加載圖片
+                const newImg = new Image();
+                newImg.src = step.background;
+                newImg.onload = () => {
+                    const newSrc = new URL(step.background, window.location.href).href;
+                    if (tutorialBgImg.src !== newSrc) {
+                        tutorialBgImg.style.opacity = 0;
+                        setTimeout(() => {
+                            tutorialBgImg.src = newSrc;
+                            tutorialBgImg.style.opacity = 1;
+                        }, 300);
+                    }
+                }
+            }
+
+            updateStepDisplay();
+
+            tutorialOverlay.style.pointerEvents = step.isInteractive ? 'none' : 'auto';
+            tutorialHighlight.style.pointerEvents = step.isInteractive ? 'auto' : 'none';
+        }
+
+        function startTutorial() {
+            document.body.classList.add('tutorial-active');
+            homeScreen.classList.remove('active');
+            tutorialScreen.classList.add('active');
+
+            externalSiteIframe.src = 'https://fhy.wra.gov.tw/fhyv2/';
+
+            setTimeout(() => {
+                tutorialOverlay.classList.add('active');
+                showStep(0);
+            }, 500);
+        }
+
+        function endTutorial() {
+            document.body.classList.remove('tutorial-active');
+            tutorialOverlay.classList.remove('active');
+            nextPageButton.style.boxShadow = '0 0 20px 5px #f39c12';
+            nextPageButton.style.transform = 'scale(1.1)';
+        }
+        
+        // 圖片預加載函數
+        function preloadTutorialImages() {
+            tutorialSteps.forEach(step => {
+                if (step.background) {
+                    const img = new Image();
+                    img.src = step.background;
+                }
+            });
+        }
+
+        startBtn.addEventListener('click', startTutorial);
+
+        tutorialOverlay.addEventListener('click', () => {
+            if (currentStep > -1 && !tutorialSteps[currentStep].isInteractive) {
+                showStep(currentStep + 1);
+            }
+        });
+
+        tutorialHighlight.addEventListener('click', (e) => {
+            if (currentStep > -1 && tutorialSteps[currentStep].isInteractive) {
+                e.stopPropagation();
+                showStep(currentStep + 1);
+            }
+        });
+        
+        // 監聽視窗大小變化時，重新定位教學元素
+        window.addEventListener('resize', () => {
+            if (currentStep > -1) {
+                updateStepDisplay();
+            }
+        });
+
+        // 頁面載入時就預加載圖片
+        preloadTutorialImages();
+
+    </script>
+    
+    // 新增下拉式按鈕
+    
+<div id="sidePanel" style="position:fixed; top:145px; right:10px; width:360px; z-index:99999; background:rgba(52, 80, 90, 0.9); padding:14px 14px; border-radius:14px; color:#fff; font-size:18px; display:none !important;">    
+    <div style="font-weight:700; margin-bottom:10px;">區域篩選</div>
+    <select id="regionSelect2" style="width:100%; padding:10px 12px; border-radius:12px;">
+        <option value="">請選擇區域</option>
+        <option value="離島">離島</option>
+        <option value="中部">中區</option>
+        <option value="南部">南區</option>
+        <option value="北部">北區</option>
+    
+       <!-- 不顯示東區，因為沒有東區水庫 -->
+      <!-- <option value="東部">東區</option> -->
+    
+        </select>
+
+        <!-- ✅ 新增：低水位排行 -->
+        <div id="rankTitle" style="margin-top:12px; font-weight:800; font-size:16px;">
+        低水位水庫排行（前三名）
+        </div>
+        <div id="rankBox" style="
+        margin-top:8px;
+        background:rgba(255,255,255,0.12);
+        padding:10px;
+        border-radius:10px;
+        font-size:18px; /*字體變大*/
+        line-height:1.6;
+        ">
+        請先選擇一個區域
+        </div>
+
+        
+        <!-- 平均蓄水率標題 -->
+        <div id="resultTitle" style="margin-top:12px; font-weight:800; font-size:16px;">
+        各水庫平均蓄水率
+        </div>
+        <div id="resultBox"
+        style="margin-top:8px; max-height:250px; overflow:auto; background:rgba(255,255,255,0.15);
+        padding:10px; border-radius:10px; font-size:16.5px;"> 
+        請選擇一個區域
+        </div>
+        <!-- font-size字體變大 -->
+
+
+    </div>
+
+    <script>
+        let data = [];
+
+        //1 先把 JSON 抓進來（只做一次） 
+        fetch('reservoir_daily.json')
+        .then(r => r.json())
+        .then(d => {
+            data = d;
+            console.log('JSON 載入成功，總筆數：', data.length);
+        })
+        .catch(err => console.error('JSON 載入失敗：', err));
+
+        // 2 下拉式：選到哪個區域就篩選
+        document.getElementById('regionSelect2').addEventListener('change', e => {
+            //回一開始沒選東西
+            if (e.target.value === '') {
+                document.getElementById('rankBox').innerHTML = '請先選擇一個區域';
+                document.getElementById('resultBox').innerHTML = '請選擇一個區域請先選擇一個區域';
+                return;
+            }
+
+            const region = e.target.value;
+            console.log('你選的是：', region);
+
+            const codeMap = {
+                北部: '10',
+                中部: '20',
+                南部: '30',
+                東部: '40',
+                離島: '50'
+                
+            };
+           
+
+            const code = codeMap[region];
+
+            const filtered = data.filter(item =>
+                String(item.reservoiridentifier || '').slice(0, 2) === code
+            );
+
+            console.log('篩選後筆數：', filtered.length);
+            console.log(filtered);
+
+            /* ====== 水庫低水位排行（前三名）====== */
+            const rankBox = document.getElementById('rankBox');
+
+           const withRate = filtered
+            .map(item => {
+                const dwl = Number(item.dwl);
+                const inflow = Number(item.inflow);
+                const outflow = Number(item.outflowtotal);
+                const capacity = Number(item.capacity);
+
+                // 防呆：必要欄位檢查
+                if (
+                Number.isNaN(dwl) ||
+                Number.isNaN(inflow) ||
+                Number.isNaN(outflow) ||
+                Number.isNaN(capacity) ||
+                capacity <= 0
+                ) {
+                return null;
+                }
+
+                // 模擬水量
+                let simulated = dwl + inflow - outflow;
+
+                // 防止負值
+                if (simulated < 0) simulated = 0;
+
+                // 儲水率 %
+                let rate = (simulated / capacity) * 100;
+                rate = Math.max(0, Math.min(rate, 100));
+
+                return {
+                name: item.reservoirname,
+                rate
+                };
+            })
+            .filter(x => x !== null);
+
+            const bottom3 = withRate
+            .sort((a, b) => a.rate - b.rate)
+            .slice(0, 3);
+
+            if (bottom3.length === 0) {
+            rankBox.innerHTML = '此區域目前無可計算的水位資料';
+            } else {
+                //前三名排名
+            // 只留 <80（紅/黃），把藍色(>=80)刪掉
+            const bottom3NoBlue = withRate
+            .sort((a, b) => a.rate - b.rate)
+            .filter(x => x.rate < 70)   // ← 重點：藍色不顯示
+            .slice(0, 3);               // 取前三
+
+            if (bottom3NoBlue.length === 0) {
+            rankBox.innerHTML = '此區域目前沒有需要警戒的水庫（已隱藏水位穩定者）';
+            } else {
+            rankBox.innerHTML = bottom3NoBlue.map((x, i) => {
+                // 顯示用 %（<=0 一律 0）
+                let showRate = x.rate;
+                if (showRate <= 0) showRate = 0;
+
+                let c = '#ffffff';
+                let label = '';
+
+                if (showRate < 50) {
+                c = '#ff4d4f';
+                label = '紅色警報！即將啟動分區供水';
+                } else {
+                c = '#ffc582';
+                label = '水位偏低！將面臨限水風險';
+                }
+
+                return `${i + 1}　${x.name}　` +
+                `<span style="color:${c}; font-weight:900;">${showRate.toFixed(0)}%</span>` +
+                `<br><span style="color:${c}; font-weight:900;">（${label}）</span>`;
+
+            }).join('<br>');
+}
+
+            }
+
+            const box = document.getElementById('resultBox');
+
+            if (filtered.length === 0) {
+                box.innerHTML = '此區域目前沒有水庫資料';
+            } else {
+                box.innerHTML = filtered
+                .map(item => {
+                const dwl = Number(item.dwl);
+                const inflow = Number(item.inflow);
+                const outflow = Number(item.outflowtotal);
+                const capacity = Number(item.capacity);
+
+                if (
+                    Number.isNaN(dwl) ||
+                    Number.isNaN(inflow) ||
+                    Number.isNaN(outflow) ||
+                    Number.isNaN(capacity) ||
+                    capacity <= 0
+                ) {
+                    return null;
+                }
+
+                let simulated = dwl + inflow - outflow;
+                if (simulated < 0) simulated = 0;
+
+                let rate = (simulated / capacity) * 100;
+                rate = Math.max(0, Math.min(rate, 100));
+
+                return { item, rate };
+                })
+                .filter(x => x !== null)
+                
+                // 把藍色(>=70%)隱藏，只留 <80 的
+                .filter(x => x.rate !== null && x.rate < 70)
+                .map(x => {
+                    const item = x.item;
+                    const rate = x.rate;
+
+                    let rateText = `${rate.toFixed(0)}%`;
+                    let rateColor = '#ffffff';
+
+                    if (rate <= 0) {
+                    rateText = '0%';
+                    rateColor = '#ff4d4f';
+                    } else if (rate < 50) {
+                    rateColor = '#ff4d4f';
+                    } else {
+                    rateColor = '#ffc582'; // 50~70
+                    }
+
+                    return `• ${item.reservoirname} ： <span style="color:${rateColor}; font-weight:900;">${rateText}</span>`;
+
+
+                })
+                .join('<br>');
+
+            }
+            });
+
+
+    </script>
+
+
+</body>
+
+</html>
