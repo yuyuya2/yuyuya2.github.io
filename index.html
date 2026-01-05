@@ -207,9 +207,21 @@
                 display: flex;
             }
         }
+         /* ✅ 手機：把右側框框往上推，避免蓋住「進入問卷」 */
+        @media (max-width: 768px) {
+        #sidePanel{
+            top: 60px !important;
+            right: 10px !important;
+            width: 92vw !important;
+            max-height: 55vh !important;
+            overflow: auto !important;
+        }
 
+        .next-page-button{
+            z-index: 100000 !important;
+        }
+        }
         
-
     </style>
 </head>
 <body>
